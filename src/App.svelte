@@ -39,7 +39,6 @@
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    width: 100vw;
     min-height: 100vh;
     background: #f1f1f1;
   }

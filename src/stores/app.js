@@ -372,8 +372,6 @@ export const initXToken = async xTokenAddress => {
           fn: stepsStore.SyncStep(async step => {
             const xTokenUsdbRelay$ = get(xTokenUsdbRelay);
 
-            // console.log(await getRate());
-
             // TODO: improve
             return xTokenUsdbRelay$.methods
               .issue(account, toWei(get(step).fnOps.input || 1, "ether"))
@@ -539,22 +537,6 @@ export const initXToken = async xTokenAddress => {
         .call()
         .then(res => Number(res));
 
-      console.log(
-        "my bnt balance",
-        await bntToken$.methods
-          .balanceOf(account)
-          .call()
-          .then(res => Number(res))
-      );
-
-      console.log(
-        "my usdb balance",
-        await get(usdbToken)
-          .methods.balanceOf(account)
-          .call()
-          .then(res => Number(res))
-      );
-
       if (balance > 0) {
         pushLiquidate();
       }
@@ -600,11 +582,7 @@ export const initXToken = async xTokenAddress => {
         text: `Exchange BNT for USDB.`,
         fn: stepsStore.SyncStep(async step => {
           const bancorNetwork$ = get(bancorNetwork);
-
           const input = toWei(get(step).fnOps.input || 1, "ether");
-          console.log(input);
-
-          console.log(await bancorNetworkFns.getRate(bancorNetwork$, input));
 
           return bancorNetworkFns.convert(bancorNetwork$, input);
         })
