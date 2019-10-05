@@ -6,8 +6,9 @@
   export let bgColor = Required("bgColor");
   export let fontColor = Required("fontColor");
   export let borderColor = Required("borderColor");
+  export let type = "number";
   export let disabled = false;
-  export let value;
+  export let value = type === "number" ? undefined : "";
   export let max;
   export let placeholder;
 
@@ -56,13 +57,6 @@
 </style>
 
 <div class="container" use:useCssVars={cssVars}>
-  <input
-    type="number"
-    min="0"
-    {max}
-    {value}
-    {disabled}
-    {placeholder}
-    on:change />
+  <input {type} min="0" {max} {value} {disabled} {placeholder} on:change />
   <slot />
 </div>

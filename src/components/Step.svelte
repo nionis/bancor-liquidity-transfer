@@ -5,7 +5,7 @@
   import MdCheck from "svelte-icons/md/MdCheck.svelte";
   import Button from "./Button.svelte";
   import Loading from "./Loading.svelte";
-  import NumberInput from "./NumberInput.svelte";
+  import Input from "./Input.svelte";
   import Icon from "./Icon.svelte";
   import { nextStep } from "../stores/steps";
   import Required from "../utils/Required";
@@ -54,6 +54,7 @@
   .text {
     display: flex;
     justify-content: flex-start;
+    text-align: left;
   }
 
   .status {
@@ -74,7 +75,7 @@
     {#if !done}
       <div class="item input">
         {#if $store.inputMsg}
-          <NumberInput
+          <Input
             on:change={e => {
               store.update(() => {
                 $store.fnOps.input = e.target.value;
