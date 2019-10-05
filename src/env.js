@@ -10,9 +10,9 @@ export const addresses = {
   },
   // 7545 for localhost networkid
   "7545": {
-    contractRegistry: "0xb588d275d8ed56ae14ebef5c571dede82ec51d2a",
-    converterRegistry: "0xe9ee27f96e67b812ba9f18716ccdbd9d3110bbd0",
-    bntToken: "0xa4e4ff4e9f2b30810d35dba87839a85e078fa638",
-    usdbToken: "0x6bedbc7c069e3d877a8eab406b0193b7b25ff1e7"
+    contractRegistry: "0xc87a07f35d917d1064e06b1e335dfbf3be9660b4",
+    converterRegistry: "0xbed6fc7d7bf3362eae1d38f23116281ded4386ae",
+    bntToken: "0x3769c0109fc26e5f4e94fbbdeb49049f90a504a4",
+    usdbToken: "0x2a055525c48be7733462c4111ac7021d1afe882b"
   }
 };

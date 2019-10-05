@@ -40,7 +40,7 @@ export const convert = async (bancorNetwork, amount) => {
   const usdbToken$ = get(usdbToken);
   const usdbConverter$ = get(usdbConverter);
   const bntToken$ = get(bntToken);
-  const path = [usdbToken$.address, usdbConverter$.address, bntToken$.address];
+  const path = [bntToken$.address, usdbConverter$.address, usdbToken$.address];
 
   return bancorNetwork.methods.claimAndConvert(path, amount, 1).send({
     from: get(account)

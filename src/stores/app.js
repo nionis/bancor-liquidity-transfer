@@ -376,7 +376,7 @@ export const initXToken = async xTokenAddress => {
 
             // TODO: improve
             return xTokenUsdbRelay$.methods
-              .issue(account, get(step).fnOps.input || 1000)
+              .issue(account, toWei(get(step).fnOps.input || 1, "ether"))
               .send({
                 from: account
               });
@@ -601,11 +601,10 @@ export const initXToken = async xTokenAddress => {
         fn: stepsStore.SyncStep(async step => {
           const bancorNetwork$ = get(bancorNetwork);
 
-          // const bntToken$ = get(bntToken);
-          // const balance = await bntToken$.methods.balanceOf(account).call();
-          // console.log(await bancorNetworkFns.getRate(1));
           const input = toWei(get(step).fnOps.input || 1, "ether");
           console.log(input);
+
+          console.log(await bancorNetworkFns.getRate(bancorNetwork$, input));
 
           return bancorNetworkFns.convert(bancorNetwork$, input);
         })
