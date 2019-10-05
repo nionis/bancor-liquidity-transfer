@@ -1,5 +1,5 @@
 .DS_Store
 node_modules
-example/bundle.*
+public/bundle.*
 notes.txt
 stats.html
