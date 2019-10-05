@@ -18,6 +18,5 @@ Temporary contracts which are not registered to converter registry are saved in 
 
 Here are some improvements I will be implementing:
 
-* fix any bugs that appear on mainnet but not on localhost
 * provide more context to each step, include stuff like user balance, etc
 * polish UI
