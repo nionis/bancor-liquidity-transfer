@@ -74,12 +74,7 @@
   <div class={`content ${!trade ? 'content-styled' : ''}`}>
     {#if trade}
       <div class="exchange">
-        <BancorConversionWidget
-          orientation="horizontal"
-          theme="light"
-          colors={{}}
-          tokenA="ETH"
-          tokenB="BNT" />
+        <BancorConversionWidget sendToken="ETH" receiveToken="BNT" />
       </div>
       <Button
         on:click={() => (trade = false)}
