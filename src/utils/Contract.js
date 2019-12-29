@@ -6,7 +6,7 @@
 
 import { Contract as EthContract, ContractAbi } from "web3x-es/contract";
 import safeFetch from "./safeFetch";
-import { commit, addresses } from "../env";
+import { commit } from "../env";
 
 const abis = {};
 const bytecodes = {};

@@ -1,25 +1,26 @@
 import { get } from "svelte/store";
-import {
-  toWei,
-  fromWei,
-  utf8ToHex,
-  hexToNumberString,
-  bufferToHex
-} from "web3x-es/utils";
-import { eth, account } from "../stores/eth";
-import {
-  contractRegistry,
-  bntToken,
-  usdbToken,
-  usdbConverter
-} from "../stores/app";
-import Contract from "./Contract";
+import { account, bancorSdk } from "../stores/eth";
+import { bntToken, usdbToken } from "../stores/app";
+
+export const getPath = (tokenSendAddress, tokenReceiveAddress) => {
+  return get(bancorSdk)
+    .generatePath(
+      {
+        blockchainType: "ethereum",
+        blockchainId: tokenSendAddress
+      },
+      {
+        blockchainType: "ethereum",
+        blockchainId: tokenReceiveAddress
+      }
+    )
+    .then(res => res.paths[0].path);
+};
 
 export const getRate = async (bancorNetwork, amount) => {
   const usdbToken$ = get(usdbToken);
-  const usdbConverter$ = get(usdbConverter);
   const bntToken$ = get(bntToken);
-  const path = [usdbToken$.address, usdbConverter$.address, bntToken$.address];
+  const path = await getPath(usdbToken$.address, bntToken$.address);
 
   const { receiveAmount } = await bancorNetwork.methods
     .getReturnByPath(path, amount)
@@ -38,9 +39,8 @@ export const getRate = async (bancorNetwork, amount) => {
 
 export const convert = async (bancorNetwork, amount) => {
   const usdbToken$ = get(usdbToken);
-  const usdbConverter$ = get(usdbConverter);
   const bntToken$ = get(bntToken);
-  const path = [bntToken$.address, usdbConverter$.address, usdbToken$.address];
+  const path = await getPath(bntToken$.address, usdbToken$.address);
 
   return bancorNetwork.methods.claimAndConvert(path, amount, 1).send({
     from: get(account)

@@ -1,12 +1,13 @@
-// https://github.com/bancorprotocol/contracts/tree/528425775d9b72a63bf96b8c574c175c45c1efaa
-export const commit = "528425775d9b72a63bf96b8c574c175c45c1efaa";
+// https://github.com/bancorprotocol/contracts/tree/296398f50f32ad91d92c135a3761a9d625d56a75
+// version 0.5.12
+export const commit = "296398f50f32ad91d92c135a3761a9d625d56a75";
 
 export const addresses = {
   "1": {
     contractRegistry: "0x52Ae12ABe5D8BD778BD5397F99cA900624CfADD4",
-    converterRegistry: "0x0DDFF327ddF7fE838e3e63d02001ef23ad1EdE8e",
+    converterRegistry: "0xf6E2D7F616B67E46D708e4410746E9AAb3a4C518",
     bntToken: "0x1f573d6fb3f13d689ff844b4ce37794d79a7ff1c",
-    usdbToken: "0xedf216b3c9748082c2d7f3f54efe45b41076e3e1"
+    usdbToken: "0x309627af60f0926daa6041b8279484312f2bf060"
   },
   // 7545 for localhost networkid
   "7545": {

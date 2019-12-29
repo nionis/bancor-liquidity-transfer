@@ -23,6 +23,44 @@ export const xTokenBntConverterConversions = writable(undefined);
 export const xTokenUsdbConverter = writable(undefined);
 export const xTokenUsdbConverterConversions = writable(undefined);
 
+export const getConvertersByToken = async (eth, token) => {
+  const _converterRegistry = get(converterRegistry);
+
+  const relays = await _converterRegistry.methods
+    .getConvertibleTokenSmartTokens(token.address)
+    .call()
+    .then(list => list.map(d => bufferToHex(d.buffer)));
+  console.log(relays);
+
+  const converters = await _converterRegistry.methods
+    .getConvertersBySmartTokens(relays)
+    .call()
+    .then(list => list.map(d => bufferToHex(d.buffer)));
+  console.log(converters);
+
+  const reserves = await Promise.all(
+    converters.map(converter => {
+      return new Promise(async resolve => {
+        const c = await Contract(eth, "BancorConverter", converter);
+
+        return c.methods
+          .reserveTokens(0)
+          .call()
+          .then(d => bufferToHex(d.buffer))
+          .then(resolve)
+          .catch(() => resolve(undefined));
+      });
+    })
+  );
+  console.log(reserves);
+
+  return {
+    relays,
+    converters,
+    reserves
+  };
+};
+
 export const init = async () => {
   const networkId = get(ethStore.networkId);
   const addresses = env.addresses[networkId];
@@ -35,13 +73,6 @@ export const init = async () => {
 
   const eth = get(ethStore.eth);
 
-  const converterRegistry$ = await Contract(
-    eth,
-    "BancorConverterRegistry",
-    addresses.converterRegistry
-  );
-  converterRegistry.update(() => converterRegistry$);
-
   const contractRegistry$ = await Contract(
     eth,
     "ContractRegistry",
@@ -49,33 +80,18 @@ export const init = async () => {
   );
   contractRegistry.update(() => contractRegistry$);
 
-  const bntToken$ = await Contract(eth, "SmartToken", addresses.bntToken);
+  const converterRegistry$ = await Contract(
+    eth,
+    "BancorConverterRegistry",
+    addresses.converterRegistry
+  );
+  converterRegistry.update(() => converterRegistry$);
+
+  const bntToken$ = await Contract(eth, "ERC20Token", addresses.bntToken);
   bntToken.update(() => bntToken$);
 
-  const usdbToken$ = await Contract(eth, "SmartToken", addresses.usdbToken);
+  const usdbToken$ = await Contract(eth, "ERC20Token", addresses.usdbToken);
   usdbToken.update(() => usdbToken$);
-
-  const tokenConverterCount = await converterRegistry$.methods
-    .converterCount(usdbToken$.address)
-    .call();
-
-  if (Number(tokenConverterCount) > 0) {
-    const tokenConverterAddress = await converterRegistry$.methods
-      .converterAddress(
-        usdbToken$.address,
-        String(Number(tokenConverterCount) - 1)
-      )
-      .call()
-      .then(res => bufferToHex(res.buffer));
-
-    const tokenConverter = await Contract(
-      eth,
-      "BancorConverter",
-      tokenConverterAddress
-    );
-
-    usdbConverter.update(() => tokenConverter);
-  }
 
   const bancorNetworkAddress = await contractRegistry$.methods
     .addressOf(utf8ToHex("BancorNetwork"))
@@ -104,7 +120,7 @@ export const initXToken = async xTokenAddress => {
       return;
     }
 
-    const xToken$ = await Contract(eth, "SmartToken", xTokenAddress);
+    const xToken$ = await Contract(eth, "ERC20Token", xTokenAddress);
     const [xTokenName, xTokenSymbol, xTokenDecimals] = await Promise.all([
       xToken$.methods.name().call(),
       xToken$.methods.symbol().call(),
@@ -145,68 +161,45 @@ export const initXToken = async xTokenAddress => {
 
     const contractRegistry$ = get(contractRegistry);
     const converterRegistry$ = get(converterRegistry);
-    const converterCount = await converterRegistry$.methods
-      .converterCount(xToken$.address)
-      .call()
-      .then(res => Number(res));
 
-    if (converterCount === 0) {
+    const xTokenConverters = await getConvertersByToken(eth, xToken$);
+
+    if (xTokenConverters.converters.length === 0) {
       errorMsg.update(() => "No convertors found");
       return;
     }
 
-    const converters = await Promise.all(
-      Array.from(Array(converterCount)).map(async (v, index) => {
-        const tokenConverterAddress = await converterRegistry$.methods
-          .converterAddress(xToken$.address, String(index))
-          .call()
-          .then(res => bufferToHex(res.buffer));
-
-        const tokenConverter = await Contract(
-          eth,
-          "BancorConverter",
-          tokenConverterAddress
-        );
-
-        const mainConnectorToken = await Contract(
-          eth,
-          "SmartToken",
-          await tokenConverter.methods
-            .connectorTokens(0)
-            .call()
-            .then(res => bufferToHex(res.buffer))
-        );
-
-        const relay = await Contract(
-          eth,
-          "SmartToken",
-          await tokenConverter.methods
-            .token()
-            .call()
-            .then(res => bufferToHex(res.buffer))
-        );
-
-        return { tokenConverter, mainConnectorToken, relay };
-      })
-    );
-
     await Promise.all(
-      converters.map(async converter => {
-        const { tokenConverter, mainConnectorToken, relay } = converter;
+      xTokenConverters.relays.map(async (relayAddress, i) => {
+        const converterAddress = xTokenConverters.converters[i];
+        const reserveAddress = xTokenConverters.reserves[i];
 
-        const isBnt = Address.fromString(mainConnectorToken.address).equals(
+        const isBnt = Address.fromString(reserveAddress).equals(
           Address.fromString(addresses.bntToken)
         );
-        const isUsdb = Address.fromString(mainConnectorToken.address).equals(
+        const isUsdb = Address.fromString(reserveAddress).equals(
           Address.fromString(addresses.usdbToken)
         );
 
+        console.log({
+          isBnt,
+          isUsdb
+        });
+
+        const converter = await Contract(
+          eth,
+          "BancorConverter",
+          converterAddress
+        );
+
+        const relay = await Contract(eth, "SmartToken", relayAddress);
+
         if (isBnt) {
           xTokenBntRelay.update(() => relay);
-          xTokenBntConverter.update(() => tokenConverter);
+          xTokenBntConverter.update(() => converter);
         } else if (isUsdb) {
           xTokenUsdbRelay.update(() => relay);
-          xTokenUsdbConverter.update(() => tokenConverter);
+          xTokenUsdbConverter.update(() => converter);
         }
       })
     );
@@ -405,7 +398,7 @@ export const initXToken = async xTokenAddress => {
             const xTokenUsdbConverter$ = get(xTokenUsdbConverter);
 
             return converterRegistry$.methods
-              .registerConverter(xToken$.address, xTokenUsdbConverter$.address)
+              .addConverter(xTokenUsdbConverter$.address)
               .send({
                 from: account
               });
@@ -417,10 +410,11 @@ export const initXToken = async xTokenAddress => {
     if (!get(xTokenUsdbConverter)) {
       pushAddToRegistry();
     } else {
-      const convertersCount = await converterRegistry$.methods
-        .converterCount(xToken$.address)
-        .call()
-        .then(value => Number(value));
+      const convertersCount = await getConvertersByToken(eth, xToken$).then(
+        res => {
+          return res.converters.length;
+        }
+      );
 
       if (convertersCount < 2) {
         pushAddToRegistry();
@@ -646,7 +640,8 @@ export const initXToken = async xTokenAddress => {
     );
 
     stepsStore.addSteps(steps);
-  } catch (err) {
+  } catch (error) {
+    console.error(error);
     errorMsg.update(() => "Something unexpected happened");
   }
 };

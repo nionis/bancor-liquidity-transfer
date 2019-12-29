@@ -5,7 +5,7 @@
   import Button from "./components/Button.svelte";
   import Steps from "./components/Steps.svelte";
   import Input from "./components/Input.svelte";
-  import BancorConversionWidget from "bancor-conversion-widget";
+  // import BancorConversionWidget from "bancor-conversion-widget";
   import * as ethStore from "./stores/eth.js";
   import * as appStore from "./stores/app.js";
   import * as stepsStore from "./stores/steps.js";
@@ -72,10 +72,12 @@
 
 <div class="container">
   <div class={`content ${!trade ? 'content-styled' : ''}`}>
-    {#if trade}
-      <div class="exchange">
+    {#if $errorMsg}
+      <p>{$errorMsg}</p>
+    {:else if trade}
+      <!-- <div class="exchange">
         <BancorConversionWidget sendToken="ETH" receiveToken="BNT" />
-      </div>
+      </div> -->
       <Button
         on:click={() => (trade = false)}
         bgColor={colors.buttonBg}
@@ -104,14 +106,14 @@
           borderColor={colors.buttonBorder}>
           start
         </Button>
-        or
+        <!-- or
         <Button
           on:click={() => (trade = true)}
           bgColor={colors.buttonBg}
           fontColor={colors.buttonFont}
           borderColor={colors.buttonBorder}>
           trade
-        </Button>
+        </Button> -->
       </div>
     {:else if !steps}
       <h4 style="margin-bottom: 10px;">Enter your token's address</h4>
@@ -138,9 +140,6 @@
           next
         </Button>
       </div>
-      {#if $errorMsg}
-        <p>{$errorMsg}</p>
-      {/if}
     {:else}
       <Steps />
     {/if}
