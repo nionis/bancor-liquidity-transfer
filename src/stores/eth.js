@@ -8,8 +8,6 @@ import { LegacyProviderAdapter } from "web3x-es/providers";
 import { writable, derived, get } from "svelte/store";
 import _bancorSdk from "bancor-sdk";
 
-console.log(_bancorSdk);
-
 const eth = writable(undefined); // ethereum instance
 const installed = writable(false); // metamask is installed on user's browser
 const accepted = writable(false); // user has accepted this website on metamask

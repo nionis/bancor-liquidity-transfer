@@ -30,13 +30,11 @@ export const getConvertersByToken = async (eth, token) => {
     .getConvertibleTokenSmartTokens(token.address)
     .call()
     .then(list => list.map(d => bufferToHex(d.buffer)));
-  console.log(relays);
 
   const converters = await _converterRegistry.methods
     .getConvertersBySmartTokens(relays)
     .call()
     .then(list => list.map(d => bufferToHex(d.buffer)));
-  console.log(converters);
 
   const reserves = await Promise.all(
     converters.map(converter => {
@@ -52,7 +50,6 @@ export const getConvertersByToken = async (eth, token) => {
       });
     })
   );
-  console.log(reserves);
 
   return {
     relays,
@@ -110,6 +107,8 @@ export const init = async () => {
 // run once user enters token address
 export const initXToken = async xTokenAddress => {
   try {
+    await ethStore.getAccept();
+
     const eth = get(ethStore.eth);
     const networkId = get(ethStore.networkId);
     const addresses = env.addresses[networkId];
@@ -181,11 +180,6 @@ export const initXToken = async xTokenAddress => {
           Address.fromString(addresses.usdbToken)
         );
 
-        console.log({
-          isBnt,
-          isUsdb
-        });
-
         const converter = await Contract(
           eth,
           "BancorConverter",
@@ -208,6 +202,11 @@ export const initXToken = async xTokenAddress => {
       errorMsg.update(() => "BNT convertor not found");
       return;
     }
+
+    console.log({
+      xTokenBntConverter: (get(xTokenBntConverter) || {}).address,
+      xTokenUsdbConverter: (get(xTokenUsdbConverter) || {}).address
+    });
 
     const account = get(ethStore.account);
     const steps = [];
@@ -340,22 +339,22 @@ export const initXToken = async xTokenAddress => {
       }
     }
 
-    // set conversion fee on converter creation
-    steps.push(
-      stepsStore.Step({
-        inputMsg: "fee",
-        text: `Set conversion fee.`,
-        fn: stepsStore.SyncStep(async step => {
-          const converter$ = get(xTokenUsdbConverter);
+    // // set conversion fee on converter creation
+    // steps.push(
+    //   stepsStore.Step({
+    //     inputMsg: "fee",
+    //     text: `Set conversion fee.`,
+    //     fn: stepsStore.SyncStep(async step => {
+    //       const converter$ = get(xTokenUsdbConverter);
 
-          return converter$.methods
-            .setConversionFee(get(step).fnOps.input || 1000)
-            .send({
-              from: account
-            });
-        })
-      })
-    );
+    //       return converter$.methods
+    //         .setConversionFee(get(step).fnOps.input || 1000)
+    //         .send({
+    //           from: account
+    //         });
+    //     })
+    //   })
+    // );
 
     const pushIssueTokens = () => {
       steps.push(
@@ -387,37 +386,6 @@ export const initXToken = async xTokenAddress => {
 
       if (supply === 0) {
         pushIssueTokens();
-      }
-    }
-
-    const pushAddToRegistry = () => {
-      steps.push(
-        stepsStore.Step({
-          text: `Add converter to the converter registry.`,
-          fn: stepsStore.SyncStep(async () => {
-            const xTokenUsdbConverter$ = get(xTokenUsdbConverter);
-
-            return converterRegistry$.methods
-              .addConverter(xTokenUsdbConverter$.address)
-              .send({
-                from: account
-              });
-          })
-        })
-      );
-    };
-    // add converter to converter registry
-    if (!get(xTokenUsdbConverter)) {
-      pushAddToRegistry();
-    } else {
-      const convertersCount = await getConvertersByToken(eth, xToken$).then(
-        res => {
-          return res.converters.length;
-        }
-      );
-
-      if (convertersCount < 2) {
-        pushAddToRegistry();
       }
     }
 
@@ -583,28 +551,48 @@ export const initXToken = async xTokenAddress => {
       })
     );
 
-    // reset USDB allowance to 0
+    // // reset USDB allowance to 0
+    // steps.push(
+    //   stepsStore.Step({
+    //     text: "Reset USDB token allowance to 0.",
+    //     fn: stepsStore.SyncStep(async () => {
+    //       const usdbToken$ = get(usdbToken);
+    //       const xTokenUsdbConverter$ = get(xTokenUsdbConverter);
+
+    //       return usdbToken$.methods
+    //         .approve(xTokenUsdbConverter$.address, 0)
+    //         .send({
+    //           from: account
+    //         });
+    //     })
+    //   })
+    // );
+
+    // // approve bancor network
+    // steps.push(
+    //   stepsStore.Step({
+    //     inputMsg: `approval amount`,
+    //     text: "Approve USDB token withdrawal.",
+    //     fn: stepsStore.SyncStep(async step => {
+    //       const usdbToken$ = get(usdbToken);
+    //       const xTokenUsdbConverter$ = get(xTokenUsdbConverter);
+
+    //       const input = toWei(get(step).fnOps.input || 1, "ether");
+
+    //       return usdbToken$.methods
+    //         .approve(xTokenUsdbConverter$.address, input)
+    //         .send({
+    //           from: account
+    //         });
+    //     })
+    //   })
+    // );
+
+    // transfer USDB to pool
     steps.push(
       stepsStore.Step({
-        text: "Reset USDB token allowance to 0.",
-        fn: stepsStore.SyncStep(async () => {
-          const usdbToken$ = get(usdbToken);
-          const xTokenUsdbConverter$ = get(xTokenUsdbConverter);
-
-          return usdbToken$.methods
-            .approve(xTokenUsdbConverter$.address, 0)
-            .send({
-              from: account
-            });
-        })
-      })
-    );
-
-    // approve bancor network
-    steps.push(
-      stepsStore.Step({
-        inputMsg: `approval amount`,
-        text: "Approve USDB token withdrawal.",
+        inputMsg: `USDB tokens amount`,
+        text: `Add USDB reserves to converter.`,
         fn: stepsStore.SyncStep(async step => {
           const usdbToken$ = get(usdbToken);
           const xTokenUsdbConverter$ = get(xTokenUsdbConverter);
@@ -612,7 +600,7 @@ export const initXToken = async xTokenAddress => {
           const input = toWei(get(step).fnOps.input || 1, "ether");
 
           return usdbToken$.methods
-            .approve(xTokenUsdbConverter$.address, input)
+            .transfer(xTokenUsdbConverter$.address, input)
             .send({
               from: account
             });
@@ -620,24 +608,74 @@ export const initXToken = async xTokenAddress => {
       })
     );
 
-    // fund new pool
+    // transfer xTokens to pool
     steps.push(
       stepsStore.Step({
-        inputMsg: `amount of ${xTokenSymbol}USDB tokens to fund`,
-        text: `Fund new converter.`,
+        inputMsg: `${xTokenSymbol} tokens amount`,
+        text: `Add ${xTokenSymbol} reserves to converter.`,
         fn: stepsStore.SyncStep(async step => {
-          const usdbToken$ = get(usdbToken);
           const xTokenUsdbConverter$ = get(xTokenUsdbConverter);
 
-          // const balance = await usdbToken$.methods.balanceOf(account).call();
           const input = toWei(get(step).fnOps.input || 1, "ether");
 
-          return xTokenUsdbConverter$.methods.fund(input).send({
-            from: account
-          });
+          return xToken$.methods
+            .transfer(xTokenUsdbConverter$.address, input)
+            .send({
+              from: account
+            });
         })
       })
     );
+
+    // // fund new pool
+    // steps.push(
+    //   stepsStore.Step({
+    //     inputMsg: `amount of ${xTokenSymbol}USDB tokens to fund`,
+    //     text: `Add more funds to new converter.`,
+    //     fn: stepsStore.SyncStep(async step => {
+    //       const usdbToken$ = get(usdbToken);
+    //       const xTokenUsdbConverter$ = get(xTokenUsdbConverter);
+
+    //       // const balance = await usdbToken$.methods.balanceOf(account).call();
+    //       const input = toWei(get(step).fnOps.input || 1, "ether");
+
+    //       return xTokenUsdbConverter$.methods.fund(input).send({
+    //         from: account
+    //       });
+    //     })
+    //   })
+    // );
+
+    const pushAddToRegistry = () => {
+      steps.push(
+        stepsStore.Step({
+          text: `Add converter to the converter registry.`,
+          fn: stepsStore.SyncStep(async () => {
+            const xTokenUsdbConverter$ = get(xTokenUsdbConverter);
+
+            return converterRegistry$.methods
+              .addConverter(xTokenUsdbConverter$.address)
+              .send({
+                from: account
+              });
+          })
+        })
+      );
+    };
+    // add converter to converter registry
+    if (!get(xTokenUsdbConverter)) {
+      pushAddToRegistry();
+    } else {
+      const convertersCount = await getConvertersByToken(eth, xToken$).then(
+        res => {
+          return res.converters.length;
+        }
+      );
+
+      if (convertersCount < 2) {
+        pushAddToRegistry();
+      }
+    }
 
     stepsStore.addSteps(steps);
   } catch (error) {
