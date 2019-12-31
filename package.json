@@ -8,7 +8,7 @@
     "dev": "run-p start:dev autobuild",
     "start": "sirv public",
     "start:dev": "sirv public --dev",
-    "deploy": "npm run build && now switch nionis && now -n bancor-liquidity-transfer --prod"
+    "deploy": "npm run build && now switch nionis && now -n bancor-liquidity-transfer --prod ./public"
   },
   "jest": {
     "transform": {
